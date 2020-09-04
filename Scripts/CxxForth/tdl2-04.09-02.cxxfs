@@ -1,0 +1,610 @@
+: step ( n -- )
+  ."  " . ." )" .s cr
+;
+
+
+\ parent tdl2-04.08-03.cxxfs
+\ Цель этого файла в том, чтобы создать рисование ллиний.
+\ 
+
+variable drawstate
+include fsl-util.fs
+\ ." include fsl-util" cr
+s" include fsl-util" show
+
+include snn.cxxf.fs
+include snl.cxxf.fs
+include sni.cxxf.fs
+
+snl-new value snlist
+
+begin-structure anode%
+	snn%
+		+field anode>snn
+		field: anode>num
+		field: anode>x
+		field: anode>y
+		field: anode>drawstate
+end-structure
+0 step
+: anode-init ( n -- = drawstate )
+	dup snn-init
+	anode>drawstate !
+;
+
+: anode-new ( n -- snn-addr )
+	anode% allocate exp-invalid-memory throw?
+	tuck anode-init
+;
+
+: anode>x! ( n snn -- n = x coordinate )
+	anode>x !
+;
+: anode>y! ( n snn -- n = y coordinate )
+	anode>y !
+;
+: anode>drawstate! ( n snn -- n = drawstate )
+	anode>drawstate !
+;
+
+: anode>x@ ( snn -- n = x coordinate )
+	anode>x @
+;
+: anode>y@ ( snn -- n = y coordinate )
+	anode>y @
+;
+: anode>drawstate@ ( snn -- n = drawstate )
+	anode>drawstate @
+;
+: anode>cell@ ( snn -- n n n = drawstate y x )
+	dup anode>drawstate @
+	dup anode>y @
+	anode>x @
+;
+
+: draw-oldline ( snl -- )
+	dup snl-first@ \ snl snn
+	swap snl-length@ \ snn len
+	begin \ snn len
+		dup \ snn len len
+	while \ snn len
+			over \ snn len snn
+			dup \ snn len snn snn
+			anode>x@ swap \ snn len x snn
+			dup \ snn len x snn snn
+			anode>y@ swap \ snn len x y snn 
+			anode>drawstate@ \ snn len x y drawstate
+			130 step setcell
+			swap snn-next@ swap
+			1-
+	repeat
+	drop
+	update 
+;
+300 step
+: anode-dump ( snn -- )
+	dup snn-dump 300 step
+	." anode num: " dup anode>num ? cr
+	." anode x: " dup anode>x ? cr
+	." anode y: " dup anode>y ? cr	
+	." anode drawstate: " anode>drawstate ? cr
+;
+400 step
+: snl-anode-dump ( snl -- )
+	dup snl-dump 400 step
+	['] anode-dump swap snl-execute
+;
+500 step
+4 1 cells array xy{
+4 1 cells array oldxy{
+
+1 drawstate !
+
+0 constant x1
+1 constant y1
+2 constant x2
+3 constant y2
+\ следующие координаты будут хранить текущие конечные
+\ координаты для рисование текущей линии
+4 constant x3
+5 constant y3
+
+: xy@ ( i -- n )
+  xy{ swap } @ 
+;
+
+: xy! ( n i -- )
+  xy{ swap } !
+;
+
+: oldxy@ ( i -- n )
+  oldxy{ swap } @ 
+;
+
+: oldxy! ( n i -- )
+  oldxy{ swap } !
+;
+
+: xy2oldxy ( -- )
+ x1 xy@ x1 oldxy!
+ y1 xy@ y1 oldxy!
+ x2 xy@ x2 oldxy!
+ y2 xy@ y2 oldxy!
+;
+
+variable dx
+variable ax
+variable sx
+variable dy
+variable ay
+variable sy
+variable d
+variable err
+variable err2
+
+: dl1 ( x1 y1 x2 y2 -- )
+	." param:"  .s cr
+	y2 xy! 
+	x2 xy! 
+	y1 xy! 
+	x1 xy! 
+	xy2oldxy
+
+	x1 xy@ x2 xy@ = y1 xy@ y2 xy@ = and  
+	if ." old" exit then
+	x2 xy@ x1 xy@ - abs dx ! 
+	y2 xy@ y1 xy@ - abs dy ! 
+	x1 xy@ x2 xy@ < if 1 sx ! else -1 sx ! then 
+	y1 xy@ y2 xy@ < if 1 sy ! else -1 sy ! then 
+	dx @ dy @ - err ! 
+
+	." this ok!" 
+	y2 xy@ x2 xy@ getcell anode-new snlist snl-append
+	x2 xy@ snlist snl-last@ anode>x !
+	y2 xy@ snlist snl-last@ anode>y !
+	x2 xy@ y2 xy@ drawstate @ setcell \ update \ drop
+	begin
+		x1 xy@ x2 xy@ <>
+		y1 xy@ y2 xy@ <>
+		or
+	while
+			\ save current line
+			y1 xy@ x1 xy@ getcell anode-new snlist snl-append
+			x1 xy@ snlist snl-last@ anode>x !
+			y1 xy@ snlist snl-last@ anode>y !
+\			500 step
+\			snlist snl-anode-dump
+			\ ---------------------------------------------------------------------
+			x1 xy@ y1 xy@  drawstate @ setcell \ update 
+			err @ 2 * err2 !
+			err2 @ dy @ negate > 
+			if
+				err @ dy @ - err !
+				x1 xy@ sx @ + x1 xy!
+				x1 xy@ x2 oldxy!
+			then
+			err2 @ dx @ <
+			if
+				err @ dx @ + err !
+				y1 xy@ sy @ + y1 xy!
+				y1 xy@ y2 oldxy!
+			then
+	repeat
+	update 
+;
+
+\ --------------------------------------------------------------------------
+
+0 step
+s" вызываем dl1" type cr
+0 0 7 10 dl1 \ update
+0 0 -7 10 dl1
+0 0 -7 -10 dl1
+0 0 7 -10 dl1
+update
+1 step
+
+2 step
+
+variable startx
+variable starty
+variable endx
+variable endy
+0 startx !
+0 starty !
+0 endx !
+0 endy !
+
+20 constant c#str-xy
+create str-xy c#str-xy 2 + chars allot align
+variable v#str-xy-len
+str-xy c#str-xy 0 fill
+c#str-xy v#str-xy-len !
+
+20 constant c#str-click
+create str-click c#str-click 2 + chars allot align
+variable v#str-click-len
+str-click c#str-click 0 fill
+s" click" v#str-click-len ! str-click v#str-click-len @ cmove
+
+: isclick? ( c-addr u -- n = 1 если был click )
+	str-click v#str-click-len @ dup strncmp 
+;
+
+\ ===============================================================
+20 constant c#str-state
+create str-state c#str-state 2 + chars allot align
+variable v#str-state-len 2 step
+
+20 constant c#old-state
+create old-state c#old-state 2 + chars allot align
+variable v#old-state-len 3 step
+
+s" end state" v#str-state-len ! str-state v#str-state-len @ cmove \ 4 step
+
+\ ------------------------------------------------------------------------------------------
+\ Здесь будут слова для обработки событий getevent, getxy
+\ ** Константы и переменные для этой обработки
+\ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+\ Обнаружил баг.
+\ В этом и предыдущих файлах используется
+\ str_event v#str_event
+\ тогда как в словах обработки  событий используется
+\ str-event v#str-event-len
+\ в файле tdl2-04.06.cxxfs буду приводить к чему-то одному
+\ От этой точки программы и ниже
+\ в словах для обработки событий буду использовать дефис
+\ Заменить
+\ ЧТО на ЧТО
+\ str-event -> str-event
+\ 
+\ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+80 constant c#str-event
+create str-event c#str-event 2 + chars allot align
+variable v#str-event-len
+variable v#position
+0 v#position !
+variable v@cur-str
+0 v@cur-str !
+variable v#cur-str-len
+0 v#cur-str-len !
+variable v#weit0=
+2 v#weit0= !
+
+\ ** Подготовка к обработке события клик
+: setup-event#xy-01 ( -- )
+	str-event v#str-event-len @ dup v#cur-str-len ! type
+	str-event v@cur-str !
+	v@cur-str @ v#cur-str-len @ s"  " strfind v#position !
+	v@cur-str @ v#position @ 1 + + v@cur-str !
+	v#cur-str-len @ v#position @ - v#cur-str-len ! 
+;
+
+\ ** Подготовка к обработке события клик
+: setup-event#xy ( -- )
+	str-event v#str-event-len @ s"  " strfind v#position !
+	str-event v#position @ 1 + + v@cur-str !
+	v#cur-str-len @ v#position @ - v#cur-str-len !
+;
+
+\ Вытаскиваем координаты из события клик
+: str#xy ( i -- x y ) \ = i количество координат, x y это сами координаты
+	begin
+		dup >R
+	while
+			v@cur-str @ v#cur-str-len @ s"  " strfind v#position !
+			0 v@cur-str @ v#position @ >num 
+			drop 1 + v@cur-str ! 
+			R> 1 -
+	repeat
+	R> drop
+;
+
+: setup-xy#xy ( -- )
+	str-event  c#str-event 0 fill
+	s" -17 -12" dup v#str-event-len ! str-event swap cmove
+	str-event v@cur-str !
+	v#str-event-len @ v#cur-str-len !
+;
+
+220 step
+: strxy#xy ( -- n n )
+	v@cur-str @ v#cur-str-len @ s"  " strfind v#position !
+	0 v@cur-str @ v#position @ >num  drop
+	1 + 
+	0 swap v#cur-str-len @ v#position @ - >num drop drop
+;
+
+\ getxy produce c-addr u . In line contein coordinates x and y.
+
+221 step
+
+\ ------------------------------------------------------------------------------------------
+
+: setstate ( c-addr u -- )
+	dup v#str-state-len !
+	str-state swap cmove
+;
+
+21 step
+: end-state ( -- c-addr u )
+	s" end state"
+;
+: start-state ( -- c-addr u )
+	s" start state"
+;
+: st1-state ( -- c-addr u )
+	s" st1 state"
+;
+
+: st2-state ( -- c-addr u )
+	s" st2 state"
+;
+
+: stop-state ( -- c-addr u )
+	s" stop state"
+;
+
+23 step
+: start 0 dup . ;
+: st1 1 dup . ;
+: st2 2 dup . ;
+: end 3 dup . ;
+: stop 4 dup . ;
+
+\ include ta1-02.cxxfs \ -----------------------------------------------------------
+
+0 step
+include tenum.cxxfs
+2 step
+begin-enumeration
+  enum a1-start
+  enum a1-st1
+  enum a1-st2
+  enum a1-st3
+  enum a1-end
+  enum a1-stop
+end-enumeration
+6 step
+variable v#a1-st
+variable v#a1-old-st
+
+: a1-setstate ( n -- )
+	v#a1-st !
+;
+: a1-state? ( -- )
+	v#a1-st @
+;
+
+10 step
+: a1-1 ( -- )
+	a1-start a1-state? -
+	if a1-st1 a1-state? -
+		if a1-st2 a1-state? -
+			if a1-st3 a1-state? -
+				if a1-end a1-state? -
+					if s" unknow state" type
+					else a1-end . ." ,end st" a1-stop a1-setstate then
+				else a1-st3 . ." ,st3 st" a1-end a1-setstate then
+			else a1-st2 . ." ,st2 st" a1-st3 a1-setstate then
+		else a1-st1 . ." ,st1 st" a1-st2 a1-setstate then
+	else a1-start . ." ,start st" a1-st1 a1-setstate  then
+;
+variable v#pos-xy
+: a1-action-start ( -- )
+	." action start"
+;
+11 step
+: a1-actionst1 ( -- )
+	." action st1"
+\	str-xy v#str-xy-len @ type
+	0 str-xy v#str-xy-len @ >num v#pos-xy ! 
+	swap endx ! 
+	0 swap 1 + v#str-xy-len v#pos-xy - >num drop drop endy !
+	snlist snl-free exp-invalid-memory throw?
+	snl-new is snlist	
+	startx @ starty @ endx @ endy @  dl1 
+	startx @ x1 xy!
+	starty @ y1 xy!
+	endx @ x2 xy!
+	endy @ y2 xy!
+	xy2oldxy
+;
+12 step
+: a1-actionst2 ( -- )
+	s" action st2" type
+\	0 drawstate !
+\	startx @ starty @ endx @ endy @  dl1  \ delete old line
+\	snlist snl-anode-dump 200 step
+	snlist draw-oldline drop
+	snlist snl-free exp-invalid-memory throw?
+	snl-new is snlist
+	1 drawstate !
+\	str-xy v#str-xy-len @ type
+	0 str-xy v#str-xy-len @ >num v#pos-xy ! 
+	swap endx ! 
+	0 swap 1 + v#str-xy-len v#pos-xy - >num drop drop endy ! 
+	startx @ starty @ endx @ endy @  dl1 
+	startx @ x1 xy!
+	starty @ y1 xy!
+	endx @ x2 xy!
+	endy @ y2 xy!
+	xy2oldxy	
+;
+: a1-actionst3 ( -- )
+	." action st3"
+;
+: a1-actionend ( -- )
+	." action end"
+	a1-st1 a1-setstate
+	\ bye
+;
+13 step
+: a1-2 ( -- )
+	a1-start a1-state? -
+	if a1-st1 a1-state? - 
+		if a1-st2 a1-state? -
+			if a1-st3 a1-state? -
+				if a1-end a1-state? -
+					if s" unknow state" type 
+					else a1-end . a1-actionend then
+				else a1-st3 . a1-actionst3 then
+			else a1-st2 . a1-actionst2 then
+		else a1-st1 . a1-actionst1  then
+	else a1-start . a1-action-start then
+;
+
+1
+114 step
+
+\ a1-start a1-setstate
+: step-a1 ( -- )
+	a1-state? v#a1-old-st !
+	a1-1  
+	a1-state? v#a1-old-st @ -
+	if
+		a1-2 
+	else
+		s" old state"
+	then
+;
+16 step
+: run-a1 ( -- )
+	begin
+		a1-state? a1-stop -
+	while
+			step-a1
+	repeat
+;
+
+\  --------------------------------------------------------------------------------------
+
+: this? ( n -- flag )
+	str-state v#str-state-len @ compare
+;
+
+: state? ( -- n = number state )
+	start-state this?
+	if
+		end-state this?
+		if
+			st1-state this?
+			if
+				st2-state this?
+				if
+					stop-state this?
+					if
+						s" unknow st" type -1
+					else	s" stop st" type stop then
+				else	s" st2 st" type st2 then
+			else	s" st1 st" type st1 then
+		else	s" end st " type end then
+	else	s" start st " type start then
+;
+
+: tfsm ( -- n = number state )
+	start-state this?
+	if end-state this?
+		if st1-state this?
+			if st2-state this?
+				if stop-state this?
+					if
+						s" unknow st" type -1
+					else	s" stop st" type stop then
+				else	s" st2 st" type 
+					str-event v#str-event-len @ isclick? 
+					if  ." white end click" cr
+						str-xy c#str-xy 0 fill
+						str-xy c#str-xy getxy dup v#str-xy-len ! type
+						step-a1
+					else
+						end-state setstate
+					then
+				then
+			else	s" st1 st" type 
+				str-event v#str-event-len @ isclick?  \ 1117 step
+				if  ." white start click" cr else st2-state setstate then 
+			then
+		else	s" end st " type stop-state setstate then
+	else	s" start st " type st1-state setstate then
+;
+
+7 step
+: tfsm02 ( -- )
+	start state? - 
+	if
+		end state? - 
+		if
+			st1 state? - 
+			if
+				st2 state? - 
+				if
+					s" unknow fsm" type
+				else s" st2 fsm " type 
+					setup-event#xy
+					2 str#xy
+					starty !
+					startx !
+					a1-start a1-setstate
+				then
+			else	s" st1 fsm " type then
+		else	s" end fsm " type 
+			setup-event#xy
+			2 str#xy
+			endy !
+			endx !
+			startx @ starty @ endx @ endy @ dl1 
+		then
+	else	s" start fsm " type  then
+;
+
+: current-state@ ( -- c-addr u )
+	str-state v#str-state-len @
+;
+
+: >old-state ( c-addr u -- )
+	dup v#old-state-len ! \ save length
+	old-state swap cmove
+;
+
+: old-state@ ( -- c-addr u )
+	old-state v#old-state-len @
+;
+
+: runfsm
+	start-state setstate
+	0 2 \ this is parameters for st1 in tfsm 
+	begin
+		stop state? - \ in @	
+	while
+			current-state@ >old-state
+			str-event  c#str-event 0 fill \ очистили буфер для нового события
+			str-event c#str-event getevent dup v#str-event-len ! type \ 53 step \ ?????????
+			tfsm \ 54 step
+\			current-state@ type old-state@ type
+			current-state@ old-state@ compare 
+			if
+\				." new state" \ 58 step
+				tfsm02
+			else
+				." old state"
+			then
+
+	repeat
+	drop drop \ drop parameters
+;
+
+runfsm
+
+\ Это работает.  Рисует линию от начальной точки до конечной точки.
+\ Теперь надо сделать отрусовку промежуточной линии
+\ т.е. резиновую линию.
+\ Создам новый файл tdl2-04.07-1b.cxxfs
+\ ===============================================================
+
+
+20 step
+\ drawlines
+
+
+

@@ -1,0 +1,77 @@
+\ chr - then char definition in ATLAST
+
+\ ASCII constants
+
+\ 32 constant chr.sp ( -- char = then space charackter )
+
+: step ( n -- )
+	bl emit . ." ") " .s cr
+;
+
+: steps ( addr n -- )
+	swap ['] type execute bl emit . ." ") " .s cr
+;
+
+"bdf: " 0 steps
+
+: within ( u1 u2 u3 -- flag )
+	over - >r - r> u<
+;
+
+: [char] ( -- )
+	char [compile]  literal
+; immediate
+
+: cell+ 1 cells + ;
+: char+ 1+ ;
+: chars ;
+
+: space bl emit ;
+: spaces begin dup  while space 1- repeat drop ;
+
+' (lit)     constant '(lit)
+
+: postpone   bl word find  if , else  '(lit) , ,  ['] , ,  then ; immediate
+
+: value!   >body ! ;
+
+: to       state @ if
+               postpone ['] postpone value!
+           else
+               ' value!
+		   then
+; immediate
+
+: BEGIN-ENUMERATION    0 ;
+: END-ENUMERATION    DROP ;
+: ENUM:    DUP CONSTANT 1+ ;
+: WITHIN ( test low high -- flag ) OVER - >R - R> U< ;
+: BOUNDS over + swap ;
+
+: tuck swap over ;
+
+: defer
+	create
+	['] abort ,
+    does>
+	  @ execute
+;
+
+: defer@      >body @ ;
+: defer!      >body ! ;
+
+: is
+	state @ if
+		postpone ['] postpone defer!
+	else
+		' defer!
+	then ; immediate
+
+: action-of
+	state @ if
+		postpone ['] postpone defer@
+	else
+		' defer@
+	then ; immediate
+
+

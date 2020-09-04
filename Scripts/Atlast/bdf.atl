@@ -1,0 +1,40 @@
+\ chr - then char definition in ATLAST
+
+\ ASCII constants
+
+32 constant chr.sp ( -- char = then space charackter )
+
+: within ( u1 u2 u3 -- flag )
+	over - >r - r> u<
+;
+
+: tstrbl ." "aaa" bl emit ." "sss" ;
+tstrbl cr
+65 emit cr
+
+: [char] ( -- )
+	char [compile]  literal
+; immediate
+
+: cell+ 1 cells + ;
+: char+ 1+ ;
+: chars ;
+
+: space bl emit ;
+: spaces begin dup  while space 1- repeat drop ;
+
+' (lit)     constant '(lit)
+
+: postpone   bl word find  if , else  '(lit) , ,  ['] , ,  then ; immediate
+
+: value!   >body ! ;
+
+: to       state @ if
+               postpone ['] postpone value!
+           else
+               ' value!
+		   then
+; immediate
+
+
+

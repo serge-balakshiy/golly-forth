@@ -1,0 +1,16 @@
+variable drawstate
+32 string  tmp_str
+"drawingstate" tmp_str s!
+tmp_str getoption !
+
+variable x1
+variable x2
+variable y1
+variable y2
+
+: drawline ( x1 y1 x2 y2 -- )
+  y2 ! x2 ! y1 ! x1 !
+  x1 @ x2 @ = y1 @ y2 @ = and if update exit then
+
+;
+"Click where to start line..." show

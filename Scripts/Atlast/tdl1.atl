@@ -1,0 +1,61 @@
+variable drawstate
+32 string  tmp_str
+"drawingstate" tmp_str s!
+
+1 drawstate !
+
+4 1 8 array xy
+0 constant x1
+1 constant y1
+2 constant x2
+3 constant y2
+
+: xy@ ( n -- )
+  xy @ 
+;
+
+: xy! ( n i -- )
+  xy !
+;
+
+variable dx
+variable ax
+variable sx
+variable dy
+variable ay
+variable sy
+variable d
+variable err
+variable err2
+
+: dl1 ( -- )
+  ." "param:"  .s
+  y2 xy! 
+  x2 xy! 
+  y1 xy! 
+  x1 xy! 
+
+ x1 xy@ x2 xy@ = y1 xy@ y2 xy@ = and  
+ if ." "old" exit 
+ else ." "new" 
+ then 
+ ." "continue" cr
+ x2 xy@ x1 xy@ - abs dx ! ." "dx=" dx @ . cr
+ y2 xy@ y1 xy@ - abs dy !  ." "dy=" dy @ . cr
+ x1 xy@ x2 xy@ < if 1 sx ! else -1 sx ! then ." "sx=" sx @ . cr
+ y1 xy@ y2 xy@ < if 1 sy ! else -1 sy ! then ." "sy=" sy @ . cr
+ dx @ dy @ - err ! ." "err=" err @ . cr
+
+." "this ok!" 
+\ continue
+
+  1 drawstate !
+  x2 xy@ y2 xy@ drawstate @ setcell  "end point line" show
+  x1 xy@ sx @ + x1 xy!		 
+  x1 xy@ y1 xy@ drawstate @ setcell "prev point line" show
+  x1 xy@ sx @ + x1 xy!
+  x1 xy@ y1 xy@ drawstate @ setcell "first point line" show
+;
+
+\ ." "Privet"
+0 0 3 0 dl1 \ update

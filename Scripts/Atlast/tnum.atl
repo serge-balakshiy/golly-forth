@@ -1,0 +1,22 @@
+\ "testing string show" show
+
+\ "new test string" show
+80 constant #strlen
+#strlen string str-name
+"Это тест строки" str-name s!
+str-name type
+\ str-name show
+\ .( "Чтобы получить режим курсора надо создать строку" )
+80 string cursor_str
+24 string s-num
+"123 -234" s-num s!
+0 s-num >num .s cr
+
+
+\ .( "потом вызвать" )
+\ cursor_str getcursor
+\ .( "в cursor_str будет передан параметр тип курсора" )
+\ .( "посмотреть тип курсова можно распечатав строку cursor_str" )
+\ cursor_str type
+
+\ cursor_str show

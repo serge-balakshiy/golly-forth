@@ -1,0 +1,15 @@
+myhi
+\ rotate
+"testing string show" show 
+
+
+.( "Чтобы получить режим курсора надо создать строку" )
+80 string cursor_str
+.( "потом вызвать" )
+cursor_str getcursor
+.( "в cursor_str будет передан параметр тип курсора" )
+.( "посмотреть тип курсова можно распечатав строку cursor_str" )
+cursor_str type
+
+
+test_str type

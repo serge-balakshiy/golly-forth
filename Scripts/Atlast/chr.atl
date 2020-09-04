@@ -1,0 +1,54 @@
+\ chr - then char definition in ATLAST
+
+\ ASCII constants
+
+32 constant chr.sp ( -- char = then space charackter )
+
+: within ( u1 u2 u3 -- flag )
+	over - >r - r> u<
+;
+
+: tstrbl ." "aaa" bl emit ." "sss" ;
+tstrbl cr
+65 emit cr
+
+: [char] ( -- )
+	char [compile]  literal
+; immediate
+
+
+: chr-range? ( char1 char2 char3 -- flag )
+	1+ within
+;
+
+: chr-lower? ( char -- flag )
+	[char] a [char] z 
+	chr-range?
+;
+
+: chr-upper? ( char -- flag = Check for an uppercase alphabetic character )
+	[char] A [char] Z chr-range?
+;
+
+: chr-alpha?   ( char -- flag = Check for an alphabetic character )
+  dup chr-upper? swap chr-lower? OR
+;
+
+: chr-digit?   ( char -- flag = Check for a decimal digit character )
+  [char] 0 [char] 9 chr-range?
+;
+
+: chr-alnum?   ( char -- flag = Check for an alphanumeric character )
+  dup chr-digit? swap chr-alpha? OR
+;
+
+: tword ( c-addr -- )
+	bl word
+;
+
+\ ==================================================================
+\ Test
+\ ==================================================================
+: GS3 WORD ;
+BL GS3 HELLO bl word strlen find drop execute .
+

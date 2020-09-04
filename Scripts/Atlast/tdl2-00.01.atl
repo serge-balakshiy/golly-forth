@@ -1,0 +1,241 @@
+include ffl.atl/include-snl.fs
+
+variable drawstate
+32 string  tmp_str
+"drawingstate" tmp_str s!
+
+1 drawstate !
+
+snl-new constant snlist
+begin-structure anode%
+	snn%
+		+field anode>snn
+		field: anode>num
+		field: anode>x
+		field: anode>y
+		field: anode>drawstate
+end-structure
+
+: anode-init ( n -- )
+	dup snn-init
+	anode>drawstate !
+;
+
+: anode-new ( n -- snn-addr )
+	anode% allocate exp-invalid-memory throw?
+	tuck anode-init
+;
+: anode>x! ( n snn -- n = x coordinate )
+	anode>x !
+;
+: anode>y! ( n snn -- n = y coordinate )
+	anode>y !
+;
+: anode>drawstate! ( n snn -- n = drawstate )
+	anode>drawstate !
+;
+
+: anode>x@ ( snn -- n = x coordinate )
+	anode>x @
+;
+: anode>y@ ( snn -- n = y coordinate )
+	anode>y @
+;
+: anode>drawstate@ ( snn -- n = drawstate )
+	anode>drawstate @
+;
+: anode>cell@ ( snn -- n n n = drawstate y x )
+	dup anode>drawstate @
+	dup anode>y @
+	anode>x @
+;
+"tsnl: " 10 steps
+: anode-dump ( snn -- )
+	dup snn-dump 300 step
+	." "anode num: " dup anode>num ? cr
+	." "anode x: " dup anode>x ? cr
+	." "anode y: " dup anode>y ? cr	
+	." "anode drawstate: " anode>drawstate ? cr
+;
+
+"tsnl: " 12 steps
+: snl-anode-dump ( snl -- )
+	dup snl-dump 400 step
+	['] anode-dump swap snl-execute
+;
+"tsnl: " 14 steps
+
+
+500 step
+
+4 1 8 array xy \ this line
+4 1 8 array oldxy \ this old line
+
+0 constant x1
+1 constant y1
+2 constant x2
+3 constant y2
+\ следующие координаты будут хранить текущие конечные
+\ координаты для рисование текущей линии
+4 constant x3
+5 constant y3
+
+: xy@ ( i -- n )
+  xy @ 
+;
+
+: xy! ( n i -- )
+  xy !
+;
+
+: oldxy@ ( i -- n )
+  oldxy @ 
+;
+
+: oldxy! ( n i -- )
+  oldxy !
+;
+: xy2oldxy ( -- )
+ x1 xy@ x1 oldxy!
+ y1 xy@ y1 oldxy!
+ x2 xy@ x2 oldxy!
+ y2 xy@ y2 oldxy!
+;
+variable dx
+variable ax
+variable sx
+variable dy
+variable ay
+variable sy
+variable d
+variable err
+variable err2
+
+\ вводим цикл. Заодно проверим русские буквы в комментах
+\ Работает
+
+: dl1 ( x1 y1 x2 y2 -- )
+  ." "param:"  .s
+  y2 xy! 
+  x2 xy! 
+  y1 xy! 
+  x1 xy! 
+  xy2oldxy
+
+ x1 xy@ x2 xy@ = y1 xy@ y2 xy@ = and  
+ if ." "old" exit 
+ else ." "new" 
+ then 
+ ." "continue" cr
+ x2 xy@ x1 xy@ - abs dx ! ." "dx=" dx @ . cr
+ y2 xy@ y1 xy@ - abs dy !  ." "dy=" dy @ . cr
+ x1 xy@ x2 xy@ < if 1 sx ! else -1 sx ! then ." "sx=" sx @ . cr
+ y1 xy@ y2 xy@ < if 1 sy ! else -1 sy ! then ." "sy=" sy @ . cr
+ dx @ dy @ - err ! ." "err=" err @ . cr
+
+." " this ok!" 
+\ continue
+
+  1 drawstate !
+
+  x2 xy@ y2 xy@ drawstate @ setcell \ drop
+  begin
+  	x1 xy@ x2 xy@ <> 
+	y1 xy@ y2 xy@ <> 
+	or
+  while
+	x1 xy@ y1 xy@  drawstate @ setcell \ drop
+	err @ 2 * err2 !
+	err2 @ dy @ negate > 
+	if
+		err @ dy @ - err !
+		x1 xy@ sx @ + x1 xy!
+		x1 xy@ x2 oldxy!
+	then   
+	err2 @ dx @ <
+	if
+		err @ dx @ + err !
+		y1 xy@ sy @ + y1 xy!
+		y1 xy@ y2 oldxy!
+	then
+  repeat
+  update
+\ Это заработалою Ура!!! 
+\ 27/01/20
+;
+80 string str_event
+"myevemt" str_event s!
+variable var_event
+1 var_event !
+
+variable startx
+variable starty
+variable endx
+variable endy
+0 startx !
+0 starty !
+0 endx !
+0 endy !
+
+20 constant c#str-xy
+\ c#str-xy string str-xy
+
+create str-xy c#str-xy 2 + chars allot \ align
+variable v#str-xy-len
+str-xy c#str-xy 0 fill
+c#str-xy v#str-xy-len !
+
+20 constant c#str-click
+create str-click c#str-click 2 + chars allot \ align
+variable v#str-click-len
+str-click c#str-click 0 fill
+"click" str-click s!
+str-click strlen v#str-click-len !
+\ s" click" v#str-click-len ! str-click v#str-click-len @ cmove
+: isclick? ( addr -- n = 1 если был клик )
+	str-click strcmp
+;
+\ ===============================================================
+20 constant c#str-state
+create str-state c#str-state 2 + chars allot \ align
+variable v#str-state-len 
+
+20 constant c#old-state
+create old-state c#old-state 2 + chars allot \ align
+variable v#old-state-len
+
+"end state" str-state s! 
+str-state strlen v#old-state-len !
+\ ------------------------------------------------------------------------------------------
+\ Здесь будут слова для обработки событий getevent, getxy
+\ ** Константы и переменные для этой обработки
+\ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+80 constant c#str-event
+create str-event c#str-event 2 + chars allot \ align
+variable v#str-event-len
+variable v#position
+0 v#position !
+variable v@cur-str
+0 v@cur-str !
+variable v#cur-str-len
+0 v#cur-str-len !
+
+: drawlines ( -- )
+  begin
+	"" str_event s!
+	str_event getevent drop
+	var_event @
+  while
+	str_event "click" strcmp 1 - 0=
+	if 0 var_event ! ." "click" cr else ( var_event @ 1- var_event ! ) then
+	str_event type 
+ repeat
+;
+
+"Privet" show
+0 0 7 10 dl1 \ update
+0 0 -7 10 dl1 \ update
+0 0 -7 -10 dl1 \ update
+0 0 7 -10 dl1 \ update
+"Draw" setcursor dup type cr setcursor
+\ drawlines

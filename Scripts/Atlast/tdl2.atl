@@ -1,0 +1,120 @@
+variable drawstate
+32 string  tmp_str
+"drawingstate" tmp_str s!
+
+1 drawstate !
+
+4 1 8 array xy \ this line
+4 1 8 array oldxy \ this old line
+
+0 constant x1
+1 constant y1
+2 constant x2
+3 constant y2
+
+: xy@ ( i -- n )
+  xy @ 
+;
+
+: xy! ( n i -- )
+  xy !
+;
+
+: oldxy@ ( i -- n )
+  oldxy @ 
+;
+
+: oldxy! ( n i -- )
+  oldxy !
+;
+: xy2oldxy ( -- )
+ x1 xy@ x1 oldxy!
+ y1 xy@ y1 oldxy!
+ x2 xy@ x2 oldxy!
+ y2 xy@ y2 oldxy!
+;
+variable dx
+variable ax
+variable sx
+variable dy
+variable ay
+variable sy
+variable d
+variable err
+variable err2
+
+\ вводим цикл. Заодно проверим русские буквы в комментах
+\ Работает
+
+: dl1 ( x1 y1 x2 y2 -- )
+  ." "param:"  .s
+  y2 xy! 
+  x2 xy! 
+  y1 xy! 
+  x1 xy! 
+  xy2oldxy
+
+ x1 xy@ x2 xy@ = y1 xy@ y2 xy@ = and  
+ if ." "old" exit 
+ else ." "new" 
+ then 
+ ." "continue" cr
+ x2 xy@ x1 xy@ - abs dx ! ." "dx=" dx @ . cr
+ y2 xy@ y1 xy@ - abs dy !  ." "dy=" dy @ . cr
+ x1 xy@ x2 xy@ < if 1 sx ! else -1 sx ! then ." "sx=" sx @ . cr
+ y1 xy@ y2 xy@ < if 1 sy ! else -1 sy ! then ." "sy=" sy @ . cr
+ dx @ dy @ - err ! ." "err=" err @ . cr
+
+." " this ok!" 
+\ continue
+
+  1 drawstate !
+
+  x2 xy@ y2 xy@ drawstate @ setcell \ drop
+  begin
+  	x1 xy@ x2 xy@ <> 
+	y1 xy@ y2 xy@ <> 
+	or
+  while
+	x1 xy@ y1 xy@  drawstate @ setcell \ drop
+	err @ 2 * err2 !
+	err2 @ dy @ negate > 
+	if
+		err @ dy @ - err !
+		x1 xy@ sx @ + x1 xy!
+		x1 xy@ x2 oldxy!
+	then   
+	err2 @ dx @ <
+	if
+		err @ dx @ + err !
+		y1 xy@ sy @ + y1 xy!
+		y1 xy@ y2 oldxy!
+	then
+  repeat
+  update
+\ Это заработалою Ура!!! 
+\ 27/01/20
+;
+80 string str_event
+"myevemt" str_event s!
+variable var_event
+1 var_event !
+: drawlines ( -- )
+  begin
+	"" str_event s!
+	str_event getevent drop
+	var_event @
+  while
+	str_event "click" strcmp 1 - 0=
+	if 0 var_event ! ." "click" cr else ( var_event @ 1- var_event ! ) then
+	str_event type 
+ repeat
+;
+
+"Privet" show
+0 0 7 10 dl1 \ update
+0 0 -7 10 dl1 \ update
+0 0 -7 -10 dl1 \ update
+0 0 7 -10 dl1 \ update
+"Draw" setcursor dup type cr setcursor
+\ drawlines

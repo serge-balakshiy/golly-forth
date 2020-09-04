@@ -1,0 +1,11 @@
+
+: begin-enumeration ( -- n )
+	0
+;
+: end-enumeration ( n -- )
+	drop
+;
+
+: enum ( -- )
+dup constant 1+ ;
+
